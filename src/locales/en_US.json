@@ -40,6 +40,9 @@
     "clipboard-export": "Export To Clipboard",
     "clipboard-import": "Import From Clipboard",
     "permission": "Permission",
+    "site-cleanup": "Site Cleanup",
+    "site-cleanup-cache-lite": "Clear Current SW + Site Cache",
+    "site-cleanup-site-data": "Clear Current Full Site Data",
     "subscribe": "Subscribe",
     "fp-notice": {
       "weak": "Weak",
@@ -65,7 +68,7 @@
     "browser": "Random by Browser Start",
     "domain": "Random by Domain",
     "global": "Random by Global Seed",
-    "enabled": "Enabled",
+    "enabled": "Leak Protection (Recommended)",
     "disabled": "Disabled"
   },
   "item": {
@@ -114,8 +117,9 @@
       "audio": "Audio fingerprinting identifies your device through unique patterns in audio signal processing.",
       "webgl": "WebGL fingerprinting captures device characteristics based on variations in 3D rendering behavior.",
       "webrtc": [
-        "When disabled, websites are prevented from obtaining your real IP address via WebRTC (especially when using a proxy). When enabled, it helps prevent IP leaks.",
-        "When disabled, some websites may behave abnormally or fail to function properly."
+        "In leak-protection mode, Chrome / Edge first enable Chromium's `disable_non_proxied_udp` policy instead of removing WebRTC entirely.",
+        "When this mode works normally, the WebRTC interface usually still exists, but host / srflx candidates are restricted so local or real egress addresses are not exposed directly; if the policy is unavailable or fails to apply, the extension automatically falls back to disabling WebRTC.",
+        "This mode still depends on a real local proxy environment and only applies to the Chromium route (Chrome / Edge); Firefox does not currently support this path. If your proxy rules send a target to DIRECT, the extension cannot override that direct route."
       ],
       "font": "Font fingerprinting reveals device details by checking which fonts are supported and how they’re rendered.",
       "webgpu": "WebGPU fingerprinting extracts device information by analyzing differences in GPU processing capabilities.",
@@ -141,6 +145,14 @@
         "- `Firefox 136+` Authorization allowed"
       ]
     },
+    "status": {
+      "webrtc": {
+        "default": "Effective state: Browser default",
+        "policy-enabled": "Effective state: Leak protection active",
+        "fallback-disabled": "Effective state: Fell back to disabled",
+        "manual-disabled": "Effective state: Manually disabled"
+      }
+    },
     "theme": {
       "system": "System",
       "dark": "Dark",
@@ -160,6 +172,9 @@
   "tip": {
     "label": {
       "not-support-tab": "Not Supported",
+      "site-cleanup-target": "Current target",
+      "site-cleanup-unsupported-target": "Current page is not a clearable http/https page",
+      "site-cleanup-site-data-warning": "Warning: this will sign you out!",
       "no-auth-required": "No Auth Required",
       "json": "Json Format",
       "subscribe-save": "Save and Subscribe",
@@ -172,6 +187,10 @@
     "ok": {
       "config-import": "Import Config Success",
       "config-export": "Export Config Success",
+      "site-cleanup": {
+        "cache-lite": "Current origin Service Worker and site cache cleared. A manual refresh of the page is recommended.",
+        "site-data": "Current origin site data cleared. A manual refresh of the page is recommended."
+      },
       "subscribe-test": "Subscription Test Passed",
       "subscribe": "Subscription Success"
     },
@@ -185,6 +204,11 @@
       "config-export": "Export Config Error",
       "config-unloaded": "Config Unloaded",
       "import-empty": "Import Config is Empty",
+      "site-cleanup": "Site cleanup failed",
+      "site-cleanup-url": "Current page is not a clearable http/https page",
+      "site-cleanup-scope": "Unsupported cleanup scope",
+      "site-cleanup-permission": "The browsingData permission was not granted, so cleanup cannot run",
+      "site-cleanup-unsupported": "This browser does not support this site cleanup feature",
       "subscribe-test": "Subscription Test Failed",
       "subscribe": "Subscription Failed",
       "ns-fast-inject": "Enable failed, please view the \"?\" option description"
@@ -193,6 +217,7 @@
       "remove-parent-domain": "Whether to remove its parent domain",
       "remove-child-domain": "Whether to remove its child domain",
       "remove-permission": "Whether to remove its permissions",
+      "site-cleanup-site-data": "Clear all site data for this current site? Warning: this will sign you out.",
       "config-import": "Whether to overwrite the current config",
       "clean-whitelist": "Whether to clean the current whitelist"
     }
@@ -204,7 +229,8 @@
       "unknown": "Not supported by current browser version"
     },
     "desc": {
-      "userScripts": "Allow the extension to use the **userScripts** permission to make the extension adaptable to more sites"
+      "userScripts": "Allow the extension to use the **userScripts** permission to make the extension adaptable to more sites",
+      "browsingData": "Allow the extension to clear the current page origin's cache, Service Worker, and site data on demand"
     }
   },
   "desc": {
@@ -214,6 +240,13 @@
       "Default - `config.json`",
       "Local - `file:///example/config.json`",
       "Remote - `http://example.com/config.json`"
+    ],
+    "site-cleanup": [
+      "Scope: this current site only. It does not automatically affect other subdomains under the same registrable domain.",
+      "Light cleanup fits: broken page styles, old versions that keep loading, PWA / cache logic issues, odd site behavior when you do not want to sign out.",
+      "Clears: this current site's Service Worker and Cache Storage.",
+      "Full cleanup fits: when you suspect the site has remembered you for too long, local records or state look wrong, or you want a more complete local reset for this site.",
+      "Clears: this current site's cookies, IndexedDB, localStorage, fileSystems, WebSQL, Cache Storage, and Service Worker. **Warning: this will sign you out.**"
     ],
     "record": [
       "**Fingerprint Record**",

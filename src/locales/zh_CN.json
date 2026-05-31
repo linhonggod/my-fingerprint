@@ -43,6 +43,9 @@
     "clipboard-export": "复制到剪贴板",
     "clipboard-import": "从剪贴板导入",
     "permission": "权限",
+    "site-cleanup": "站点清理",
+    "site-cleanup-cache-lite": "清理当前页面 SW + 站点缓存",
+    "site-cleanup-site-data": "清理当前页面全部站点数据",
     "subscribe": "订阅",
     "fp-notice": {
       "weak": "弱指纹",
@@ -68,7 +71,7 @@
     "browser": "每次启动浏览器随机值",
     "domain": "根据访问域名随机值",
     "global": "根据全局种子随机值",
-    "enabled": "启用",
+    "enabled": "防泄露（推荐）",
     "disabled": "禁用"
   },
   "item": {
@@ -117,8 +120,9 @@
       "audio": "Audio音频指纹，通过音频信号处理获取设备特征。",
       "webgl": "WebGL指纹，通过图形渲染差异获取设备特征。",
       "webrtc": [
-        "禁用后, 阻止网站通过 WebRTC 获取真实 IP 地址（尤其在使用代理时）。开启后可防止 IP 泄露。",
-        "禁用后, 可能会导致某些网站异常行为或无法正常工作。"
+        "防泄露模式下，Chrome / Edge 会优先启用 Chromium 的 `disable_non_proxied_udp` 策略，而不是直接把 WebRTC 整体关闭。",
+        "在该模式正常生效时，WebRTC 接口通常仍然存在，但 host / srflx candidate 会受到限制，不再直接暴露本地或真实出口地址；若策略不可用或设置失败，扩展会自动回退为禁用 WebRTC。",
+        "该模式依赖你本机真实代理环境，仅适用于 Chromium 路线（Chrome / Edge）；Firefox 目前不支持这一路径。若代理规则把目标命中到 DIRECT，扩展无法覆盖该直连决策。"
       ],
       "font": "Fonts字体指纹，通过检测字体支持情况获取设备特征。",
       "webgpu": "WebGPU指纹，通过设备图形处理参数差异获取设备特征。",
@@ -144,6 +148,14 @@
         "- `Firefox 136+` 允许授权"
       ]
     },
+    "status": {
+      "webrtc": {
+        "default": "当前实际生效：浏览器默认",
+        "policy-enabled": "当前实际生效：代理防泄露",
+        "fallback-disabled": "当前实际生效：已回退为禁用",
+        "manual-disabled": "当前实际生效：手动禁用"
+      }
+    },
     "theme": {
       "system": "跟随系统",
       "dark": "暗色",
@@ -163,6 +175,9 @@
   "tip": {
     "label": {
       "not-support-tab": "当前标签页不支持",
+      "site-cleanup-target": "当前目标",
+      "site-cleanup-unsupported-target": "当前页面不是可清理的 http/https 页面",
+      "site-cleanup-site-data-warning": "请注意：清理全部数据会退出登录！",
       "no-auth-required": "无需授权",
       "json": "Json格式",
       "subscribe-save": "保存并订阅",
@@ -175,6 +190,10 @@
     "ok": {
       "config-import": "配置导入成功",
       "config-export": "配置导出成功",
+      "site-cleanup": {
+        "cache-lite": "已清理当前页面这个站点的 Service Worker 与站点缓存，建议手动刷新当前页面",
+        "site-data": "已清理当前页面这个站点的站点数据，建议手动刷新当前页面"
+      },
       "subscribe-test": "订阅测试通过",
       "subscribe": "订阅成功"
     },
@@ -188,6 +207,11 @@
       "config-export": "配置导出失败",
       "config-unloaded": "配置未加载",
       "import-empty": "导入配置为空",
+      "site-cleanup": "站点清理失败",
+      "site-cleanup-url": "当前页面不是可清理的 http/https 页面",
+      "site-cleanup-scope": "不支持的清理范围",
+      "site-cleanup-permission": "未授予 browsingData 权限，无法执行清理",
+      "site-cleanup-unsupported": "当前浏览器不支持这项站点清理功能",
       "subscribe-test": "订阅测试失败",
       "subscribe": "订阅失败",
       "ns-fast-inject": "开启失败，请查看选项的 \"?\" 配置描述"
@@ -196,6 +220,7 @@
       "remove-parent-domain": "是否移除对应的父域名",
       "remove-child-domain": "是否移对应的除子域名",
       "remove-permission": "是否关闭对应的权限",
+      "site-cleanup-site-data": "是否清理当前页面这个站点的全部站点数据？注意会退出登录！",
       "config-import": "是否覆盖当前配置",
       "clean-whitelist": "是否清空当前白名单"
     }
@@ -207,7 +232,8 @@
       "unknown": "当前浏览器版本不支持"
     },
     "desc": {
-      "userScripts": "允许该扩展使用**userScripts**权限，使该扩展能适应更多网站"
+      "userScripts": "允许该扩展使用**userScripts**权限，使该扩展能适应更多网站",
+      "browsingData": "允许该扩展按需清理当前页面这个站点的缓存、Service Worker 和站点数据"
     }
   },
   "desc": {
@@ -217,6 +243,13 @@
       "默认 - `config.json`",
       "本地 - `file:///example/config.json`",
       "网络 - `http://example.com/config.json`"
+    ],
+    "site-cleanup": [
+      "清理范围：当前页面这个站点，不自动影响同主域下其他子域。",
+      "轻度清理适合：网站样式错乱、页面总加载旧版本、PWA / 缓存逻辑异常、站点表现异常但不想退出登录。",
+      "清理内容：当前页面这个站点的 Service Worker、Cache Storage。",
+      "完整清理适合：怀疑站点长期记住了你、本地记录或状态异常、想更彻底重置本站点本地状态。",
+      "清理内容：当前页面这个站点的 cookies、IndexedDB、localStorage、fileSystems、WebSQL、Cache Storage、Service Worker。**注意会退出登录！**"
     ],
     "record": [
       "**指纹记录**",

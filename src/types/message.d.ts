@@ -24,6 +24,25 @@ declare namespace BackgroundMessage {
     type: 'version.latest'
     $?: string
   } | {
+    type: 'webrtc.status'
+    $: {
+      state: 'default' | 'policy-enabled' | 'fallback-disabled'
+      configuredMode: HookType
+      browser?: BrowserType
+    }
+  } | {
+    type: 'site.cleanup'
+    url: string
+    scope: 'cache-lite' | 'site-data'
+    $: {
+      ok: boolean
+      origin?: string
+      scope?: 'cache-lite' | 'site-data'
+      cleared?: string[]
+      messageKey?: string
+      message?: string
+    }
+  } | {
     type: 'api.check'
     api: string
     $: boolean | string

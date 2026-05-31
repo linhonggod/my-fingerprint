@@ -1,9 +1,17 @@
-import { getLocalStorage, importContext, initLocalStorage, updateContext } from "./storage";
+import {
+  getInjectedStorage,
+  getLocalStorage,
+  getWebRtcStatus,
+  importContext,
+  initLocalStorage,
+  updateContext,
+} from "./storage";
 import { removeBadge, setBadgeContent, setBadgeWhitelist } from "./badge";
 import { injectScript, reRegisterScript } from './script';
 import { tryUrl } from "@/utils/base";
 import { reRequestHeader } from "./request";
 import { logManager } from '@/utils/log';
+import { clearSiteData, isSiteCleanupScope } from "./site-cleanup";
 
 const logger = logManager.createLogger(__LOG_PREFIX_FILE_PATH__);
 
@@ -80,6 +88,59 @@ chrome.runtime.onMessage.addListener(((msg, sender, sendResponse) => {
       })
       return true
     }
+    case 'webrtc.status': {
+      getWebRtcStatus().then((status) => {
+        logger.debug('webrtc.status resolved:', status)
+        sendResponse<'webrtc.status'>(status)
+      })
+      return true
+    }
+    case 'site.cleanup': {
+      if (!isSiteCleanupScope(msg.scope)) {
+        sendResponse<'site.cleanup'>({
+          ok: false,
+          messageKey: 'tip.err.site-cleanup-scope',
+        })
+        return false
+      }
+
+      clearSiteData({
+        chromeApi: chrome,
+        url: msg.url,
+        scope: msg.scope,
+      }).then((result) => {
+        logger.info('site.cleanup successful:', {
+          origin: result.origin,
+          scope: result.scope,
+          cleared: result.cleared,
+        })
+        sendResponse<'site.cleanup'>({
+          ok: true,
+          origin: result.origin,
+          scope: result.scope,
+          cleared: result.cleared,
+        })
+      }).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error('site.cleanup failed:', message)
+
+        let messageKey = 'tip.err.site-cleanup'
+        if (message === 'site-cleanup-invalid-url' || message === 'site-cleanup-unsupported-url') {
+          messageKey = 'tip.err.site-cleanup-url'
+        } else if (message === 'site-cleanup-unsupported-browser') {
+          messageKey = 'tip.err.site-cleanup-unsupported'
+        } else if (message.includes('browsingData')) {
+          messageKey = 'tip.err.site-cleanup-permission'
+        }
+
+        sendResponse<'site.cleanup'>({
+          ok: false,
+          messageKey,
+          message,
+        })
+      })
+      return true
+    }
     case 'api.check': {
       if (msg.api === 'userScripts') {
         try {
@@ -107,7 +168,8 @@ chrome.runtime.onMessage.addListener(((msg, sender, sendResponse) => {
  */
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'loading') {
-    const { storage, whitelistHelper, blacklistHelper } = await getLocalStorage()
+    const { whitelistHelper, blacklistHelper } = await getLocalStorage()
+    const storage = await getInjectedStorage()
 
     logger.debug('chrome.tabs.onUpdated:', tab.title || tab.url || tab.id);
     logger.debug('injectScript with storage:', storage)
